@@ -1,0 +1,179 @@
+/* ================================================
+   Custom Filter CL — Admin Styles
+   ================================================ */
+
+.cf-admin-wrap {
+	max-width: 960px;
+}
+
+/* ---------- Tabs ---------- */
+.cf-admin-tabs {
+	margin-bottom: 24px;
+}
+
+/* ---------- Filter rows ---------- */
+#cf-filters-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+.cf-filter-row {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.cf-filter-row__header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 16px;
+	background: #f6f7f7;
+	border-bottom: 1px solid #e0e0e0;
+	cursor: grab;
+}
+
+.cf-filter-row__drag {
+	color: #999;
+	cursor: grab;
+}
+
+.cf-filter-row__title {
+	flex: 1;
+	font-size: 14px;
+}
+
+.cf-filter-row__toggle,
+.cf-filter-row__remove {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #666;
+	padding: 2px 6px;
+	font-size: 13px;
+}
+
+.cf-filter-row__remove {
+	color: #b32d2e;
+}
+
+.cf-filter-row__body {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+/* ---------- Fields ---------- */
+.cf-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.cf-field label {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.cf-select {
+	max-width: 300px;
+}
+
+/* ---------- Radio group ---------- */
+.cf-radio-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 20px;
+}
+
+.cf-radio-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+/* ---------- Toggle switch ---------- */
+.cf-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+}
+
+/* ---------- Settings table ---------- */
+.cf-settings-table th {
+	width: 220px;
+}
+
+/* ---------- Shortcode block ---------- */
+.cf-settings-shortcode {
+	margin-top: 30px;
+	padding: 16px;
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+}
+
+.cf-shortcode-block {
+	display: inline-block;
+	padding: 8px 14px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 3px;
+	font-size: 15px;
+	user-select: all;
+}
+
+/* ---------- Add filter button ---------- */
+#cf-add-filter {
+	margin-bottom: 16px;
+}
+
+/* ── SVG arrow field ──────────────────────────────────────────── */
+.cf-svg-field {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-width: 500px;
+}
+
+.cf-svg-preview {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	background: #f6f7f7;
+	width: fit-content;
+}
+
+.cf-svg-preview__icon {
+	display: flex;
+	align-items: center;
+	color: #1d2327;
+	font-size: 0; /* collapse whitespace */
+}
+
+.cf-svg-preview__icon svg {
+	display: block;
+	width: 18px;
+	height: 18px;
+}
+
+.cf-svg-preview__label {
+	font-size: 12px;
+	color: #646970;
+}
+
+.cf-svg-textarea {
+	font-family: monospace;
+	font-size: 12px;
+	resize: vertical;
+}

@@ -1,0 +1,559 @@
+/* ================================================
+   Custom Filter CL — Frontend Filter Styles
+   BEM namespace: .cf-*
+   Override via CSS custom properties in your theme.
+   ================================================ */
+
+/* ── Screen reader utility ─────────────────────── */
+.cf-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0,0,0,0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* ── CSS custom properties ─────────────────────── */
+.cf-filter,
+.cf-active-filters {
+	--cf-primary:   #2271b1;
+	--cf-text:      #1d2327;
+	--cf-muted:     #646970;
+	--cf-border:    #c3c4c7;
+	--cf-bg:        #fff;
+	--cf-active-bg: #e8f0fe;
+	--cf-radius:    4px;
+	--cf-gap:       1rem;
+}
+
+/* ── Filter wrapper ────────────────────────────── */
+.cf-filter {
+	display: flex;
+	flex-direction: column;
+	gap: var(--cf-gap);
+}
+
+.cf-filter__form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--cf-gap);
+}
+
+/* ── Filter block (one taxonomy) ──────────────── */
+.cf-filter__block {
+	border: 1px solid var(--cf-border);
+	border-radius: var(--cf-radius);
+	overflow: hidden;
+}
+
+/* ── Selector: native <select> ─────────────────── */
+.cf-filter__selector-wrap {
+	padding: 10px 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.cf-filter__selector-label {
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--cf-text);
+}
+
+.cf-filter__select {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid var(--cf-border);
+	border-radius: var(--cf-radius);
+	font-size: 14px;
+	color: var(--cf-text);
+	background: var(--cf-bg);
+	cursor: pointer;
+	appearance: auto;
+}
+
+.cf-filter__select:focus {
+	outline: 2px solid var(--cf-primary);
+	outline-offset: 1px;
+}
+
+/* ── Dropdown label / header ───────────────────── */
+.cf-filter__label {
+	padding: 12px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-weight: 600;
+	color: var(--cf-text);
+}
+
+.cf-filter__label--dropdown {
+	cursor: pointer;
+	user-select: none;
+	background: #f6f7f7;
+	border-bottom: 1px solid var(--cf-border);
+}
+
+.cf-filter__label--dropdown:hover { background: #ebebeb; }
+
+.cf-filter__label-arrow {
+	font-size: 11px;
+	color: var(--cf-muted);
+	transition: transform 0.2s;
+}
+
+.cf-filter__label--dropdown[aria-expanded="true"] .cf-filter__label-arrow {
+	transform: rotate(180deg);
+}
+
+/* ── List ──────────────────────────────────────── */
+.cf-filter__list-wrap { padding: 8px 0; }
+
+.cf-filter__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.cf-filter__item { padding: 0; }
+
+/* ── Checkbox style ────────────────────────────── */
+.cf-filter__checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 16px;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.cf-filter__checkbox-label:hover { background: #f6f7f7; }
+
+.cf-filter__input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	accent-color: var(--cf-primary);
+}
+
+/* ── Radio visual style ────────────────────────── */
+.cf-filter__radio-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 16px;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.cf-filter__radio-label:hover { background: #f6f7f7; }
+
+.cf-filter__radio-dot {
+	width: 16px;
+	height: 16px;
+	border: 2px solid var(--cf-border);
+	border-radius: 50%;
+	flex-shrink: 0;
+	position: relative;
+	transition: border-color 0.15s;
+}
+
+.cf-filter__radio-label.is-checked .cf-filter__radio-dot {
+	border-color: var(--cf-primary);
+}
+
+.cf-filter__radio-label.is-checked .cf-filter__radio-dot::after {
+	content: '';
+	position: absolute;
+	inset: 2px;
+	background: var(--cf-primary);
+	border-radius: 50%;
+}
+
+/* ── Label / tag list style ────────────────────── */
+.cf-filter__list--label {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 10px 16px;
+}
+
+.cf-filter__label-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 5px 12px;
+	border: 1px solid var(--cf-border);
+	border-radius: 20px;
+	font-size: 13px;
+	cursor: pointer;
+	transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.cf-filter__label-item:hover,
+.cf-filter__label-item.is-active {
+	background: var(--cf-active-bg);
+	border-color: var(--cf-primary);
+	color: var(--cf-primary);
+}
+
+/* ── Counts & names ────────────────────────────── */
+.cf-filter__count    { font-size: 11px; color: var(--cf-muted); }
+.cf-filter__item-name { flex: 1; }
+
+/* ── Manual submit actions ─────────────────────── */
+.cf-filter__actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	margin-top: 6px;
+}
+
+.cf-filter__submit {
+	padding: 9px 20px;
+	background: var(--cf-primary);
+	color: #fff;
+	border: none;
+	border-radius: var(--cf-radius);
+	cursor: pointer;
+	font-size: 14px;
+	transition: background 0.15s;
+}
+
+.cf-filter__submit:hover    { background: #135e96; }
+.cf-filter__submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cf-filter__reset {
+	font-size: 13px;
+	color: var(--cf-muted);
+	text-decoration: underline;
+}
+
+/* ================================================
+   AJAX loading state — #filter-shop-wrapper
+   Developer adds this id to their product loop div.
+   ================================================ */
+
+/* Spinner overlay on top of the product grid */
+#filter-shop-wrapper {
+	position: relative;
+	transition: opacity 0.2s;
+}
+
+#filter-shop-wrapper.cf-loading {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+/* Animated bar at the top of the wrapper */
+#filter-shop-wrapper.cf-loading::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		var(--cf-primary, #2271b1) 40%,
+		var(--cf-primary, #2271b1) 60%,
+		transparent 100%
+	);
+	background-size: 200% 100%;
+	animation: cf-loading-bar 1.2s ease-in-out infinite;
+	z-index: 10;
+}
+
+/* Centered spinner inside the wrapper */
+#filter-shop-wrapper.cf-loading::after {
+	content: '';
+	position: absolute;
+	top: 60px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 36px;
+	height: 36px;
+	border: 3px solid #e0e0e0;
+	border-top-color: var(--cf-primary, #2271b1);
+	border-radius: 50%;
+	animation: cf-spin 0.7s linear infinite;
+	z-index: 10;
+}
+
+@keyframes cf-loading-bar {
+	0%   { background-position: 100% 0; }
+	100% { background-position: -100% 0; }
+}
+
+@keyframes cf-spin {
+	to { transform: translateX(-50%) rotate(360deg); }
+}
+
+/* ================================================
+   Active Filters Bar — .cf-active-filters
+   Default position: above shortcode output.
+   Move to #choiced-filters via JS if that el exists.
+   ================================================ */
+.cf-active-filters {
+	display: none;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.cf-active-filters--visible {
+	display: flex;
+}
+
+.cf-active-filters__chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 10px 5px 12px;
+	background: var(--cf-active-bg);
+	border: 1px solid var(--cf-primary);
+	border-radius: 20px;
+	color: var(--cf-primary);
+	font-size: 13px;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+	line-height: 1.3;
+}
+
+.cf-active-filters__chip:hover {
+	background: var(--cf-primary);
+	color: #fff;
+}
+
+.cf-active-filters__chip-remove {
+	font-size: 11px;
+	opacity: 0.7;
+}
+
+.cf-active-filters__chip:hover .cf-active-filters__chip-remove {
+	opacity: 1;
+}
+
+.cf-active-filters__clear {
+	padding: 5px 12px;
+	background: none;
+	border: 1px solid var(--cf-border);
+	border-radius: 20px;
+	color: var(--cf-muted);
+	font-size: 13px;
+	text-decoration: none;
+	transition: border-color 0.15s, color 0.15s;
+}
+
+.cf-active-filters__clear:hover {
+	border-color: #b32d2e;
+	color: #b32d2e;
+}
+
+/* ================================================
+
+/* ================================================
+   Price filter — shared
+   ================================================ */
+.cf-filter__block--price {
+	border: 1px solid var(--cf-border, #c3c4c7);
+	border-radius: var(--cf-radius, 4px);
+}
+
+.cf-filter__price-label {
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--cf-text, #1d2327);
+	margin-bottom: 12px;
+}
+
+/* ================================================
+   Price inputs (from / to)
+   ================================================ */
+.cf-price-inputs {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.cf-price-inputs__label {
+	font-size: 12px;
+	color: var(--cf-muted, #646970);
+	white-space: nowrap;
+}
+
+.cf-price-inputs__input {
+	width: 80px;
+	padding: 6px 8px;
+	border: 1px solid var(--cf-border, #c3c4c7);
+	border-radius: var(--cf-radius, 4px);
+	font-size: 13px;
+	color: var(--cf-text, #1d2327);
+	background: var(--cf-bg, #fff);
+	/* hide spinner arrows */
+	-moz-appearance: textfield;
+}
+.cf-price-inputs__input::-webkit-inner-spin-button,
+.cf-price-inputs__input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.cf-price-inputs__input:focus {
+	outline: 2px solid var(--cf-primary, #2271b1);
+	outline-offset: 1px;
+	border-color: var(--cf-primary, #2271b1);
+}
+
+.cf-price-inputs__sep {
+	color: var(--cf-muted, #646970);
+	font-size: 14px;
+}
+
+/* ================================================
+   Price range slider
+   ================================================ */
+.cf-price-slider {
+	position: relative;
+	height: 20px;
+	margin: 8px 0 4px;
+}
+
+/* Invisible track background */
+.cf-price-slider__track {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	right: 0;
+	height: 4px;
+	transform: translateY(-50%);
+	background: var(--cf-border, #c3c4c7);
+	border-radius: 2px;
+	pointer-events: none;
+}
+
+/* Filled strip between handles */
+.cf-price-slider__range {
+	position: absolute;
+	top: 0;
+	height: 100%;
+	background: var(--cf-primary, #2271b1);
+	border-radius: 2px;
+}
+
+/* Both range inputs stacked on top of each other */
+.cf-price-slider__input {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	width: 100%;
+	height: 0;
+	transform: translateY(-50%);
+	-webkit-appearance: none;
+	appearance: none;
+	background: transparent;
+	pointer-events: none;
+	outline: none;
+}
+
+/* Thumb — shared */
+.cf-price-slider__input::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: var(--cf-bg, #fff);
+	border: 2px solid var(--cf-primary, #2271b1);
+	cursor: pointer;
+	pointer-events: all;
+	box-shadow: 0 1px 4px rgba(0,0,0,.15);
+	transition: border-color .15s, box-shadow .15s;
+}
+.cf-price-slider__input::-moz-range-thumb {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: var(--cf-bg, #fff);
+	border: 2px solid var(--cf-primary, #2271b1);
+	cursor: pointer;
+	pointer-events: all;
+	box-shadow: 0 1px 4px rgba(0,0,0,.15);
+	transition: border-color .15s, box-shadow .15s;
+}
+
+.cf-price-slider__input:focus::-webkit-slider-thumb {
+	box-shadow: 0 0 0 3px rgba(34,113,177,.25);
+}
+.cf-price-slider__input:focus::-moz-range-thumb {
+	box-shadow: 0 0 0 3px rgba(34,113,177,.25);
+}
+
+/* Labels below slider */
+.cf-price-slider__labels {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 10px;
+	font-size: 13px;
+	color: var(--cf-text, #1d2327);
+}
+
+.cf-price-slider__sep {
+	color: var(--cf-muted, #646970);
+	font-size: 11px;
+}
+
+/* ── Block title ──────────────────────────────────────────── */
+.cf-filter__block-title {
+	font-size: .75rem;
+	font-weight: 700;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+	color: var(--cf-label-color, #6b7280);
+	margin-bottom: 6px;
+	padding-top: 2px;
+}
+
+/* ── Price dropdown ───────────────────────────────────────── */
+.cf-price-dropdown {
+	margin-top: 8px;
+}
+.cf-price-dropdown__select {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid var(--cf-border-color, #d1d5db);
+	border-radius: 6px;
+	background: #fff;
+	font-size: .9rem;
+	cursor: pointer;
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4L6 8L10 4' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+	padding-right: 30px;
+}
+.cf-price-dropdown__select:focus {
+	outline: none;
+	border-color: var(--cf-accent-color, #3b82f6);
+	box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+/* AJAX loading overlay */
+.cf-ajax-loading {
+    position: relative;
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+.cf-ajax-loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    cursor: wait;
+}
