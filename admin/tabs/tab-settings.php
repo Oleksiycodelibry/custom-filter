@@ -14,13 +14,14 @@ function cf_save_general_settings() {
 	$clean_svg  = cf_sanitize_svg( $raw_svg );
 
 	$settings = [
-		'ajax_filter'         => ! empty( $_POST['ajax_filter'] ),
-		'autosubmit'          => ! empty( $_POST['autosubmit'] ),
-		'show_empty'          => ! empty( $_POST['show_empty'] ),
-		'show_count'          => ! empty( $_POST['show_count'] ),
-		'show_active_filters' => ! empty( $_POST['show_active_filters'] ),
-		'dropdown_arrow_svg'  => $clean_svg,
-		'price_currency'      => sanitize_text_field( wp_unslash( $_POST['price_currency'] ?? '' ) ), 
+		'ajax_filter'           => ! empty( $_POST['ajax_filter'] ),
+		'autosubmit'            => ! empty( $_POST['autosubmit'] ),
+		'show_empty'            => ! empty( $_POST['show_empty'] ),
+		'show_count'            => ! empty( $_POST['show_count'] ),
+		'show_active_filters'   => ! empty( $_POST['show_active_filters'] ),
+		'rewrite_taxonomy_urls' => ! empty( $_POST['rewrite_taxonomy_urls'] ),
+		'dropdown_arrow_svg'    => $clean_svg,
+		'price_currency'        => sanitize_text_field( wp_unslash( $_POST['price_currency'] ?? '' ) ),
 	];
 
 	update_option( 'cf_general_settings', $settings );
@@ -52,13 +53,14 @@ function cf_sanitize_svg( $svg ) {
 // ─────────────────────────────────────────────
 function cf_render_tab_settings() {
 	$s = get_option( 'cf_general_settings', [
-		'ajax_filter'         => false,
-		'autosubmit'          => true,
-		'show_empty'          => false,
-		'show_count'          => true,
-		'show_active_filters' => false,
-		'dropdown_arrow_svg'  => '',
-		'price_currency'      => '',
+		'ajax_filter'           => false,
+		'autosubmit'            => true,
+		'show_empty'            => false,
+		'show_count'            => true,
+		'show_active_filters'   => false,
+		'rewrite_taxonomy_urls' => false,
+		'dropdown_arrow_svg'    => '',
+		'price_currency'        => '',
 	] );
 
 	$default_arrow_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -116,6 +118,22 @@ function cf_render_tab_settings() {
 						<span class="cf-toggle__track"></span>
 					</label>
 					<p class="description"><?php esc_html_e( 'Show active filter chips. Use [active_filters] shortcode to control placement.', 'cf-plugin' ); ?></p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Rewrite taxonomy URLs', 'cf-plugin' ); ?></th>
+				<td>
+					<label class="cf-toggle">
+						<input type="checkbox" name="rewrite_taxonomy_urls" value="1" <?php checked( $s['rewrite_taxonomy_urls'] ?? false ); ?>>
+						<span class="cf-toggle__track"></span>
+					</label>
+					<p class="description">
+						<?php esc_html_e( 'Redirect WooCommerce taxonomy archive pages (e.g. /product-category/tops/) to the shop page with the equivalent filter applied (e.g. /shop/?cf_category[]=tops).', 'cf-plugin' ); ?>
+						<br>
+						<strong><?php esc_html_e( 'Tip:', 'cf-plugin' ); ?></strong>
+						<?php esc_html_e( 'Mapped filters use their configured URL key. Add a taxonomy in the Taxonomies tab first so the redirect uses the correct parameter name.', 'cf-plugin' ); ?>
+					</p>
 				</td>
 			</tr>
 

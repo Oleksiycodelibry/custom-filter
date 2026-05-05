@@ -108,7 +108,11 @@ function cf_apply_all_filters( $q ) {
  * or pass a custom $url_key from your filter config.
  */
 function cf_param_key( $taxonomy, $url_key = '' ) {
-	return 'cf_' . ( $url_key !== '' ? $url_key : preg_replace( '/^pa_/', '', $taxonomy ) );
+	if ( $url_key !== '' ) {
+		return 'cf_' . $url_key;
+	}
+	// Strip known WC prefixes so product_cat→cf_cat, pa_color→cf_color.
+	return 'cf_' . preg_replace( '/^(pa_|product_)/', '', $taxonomy );
 }
 
 /**
@@ -123,11 +127,15 @@ function cf_param_key( $taxonomy, $url_key = '' ) {
  * 'url_key', and 'logic' keys in the cf_filters option array.
  */
 function cf_build_tax_query_from_request( $params = [] ) {
-	$tax_query = [];
+	$tax_query      = [];
+	$handled_keys   = [];
+
+	// ── Configured filters (use their stored url_key and logic) ──
 	foreach ( get_option( 'cf_filters', [] ) as $filter ) {
 		if ( empty( $filter['taxonomy'] ) || $filter['taxonomy'] === '_price' ) continue;
 		$key   = cf_param_key( $filter['taxonomy'], $filter['url_key'] ?? '' );
 		$slugs = array_values( array_filter( array_map( 'sanitize_text_field', (array) ( $params[ $key ] ?? [] ) ) ) );
+		$handled_keys[] = $key;
 		if ( empty( $slugs ) ) continue;
 		$tax_query[] = [
 			'taxonomy' => $filter['taxonomy'],
@@ -136,6 +144,32 @@ function cf_build_tax_query_from_request( $params = [] ) {
 			'operator' => ( ( $filter['logic'] ?? 'or' ) === 'and' ) ? 'AND' : 'IN',
 		];
 	}
+
+	// ── Fallback: unregistered cf_* params (no url_key, default OR logic) ──
+	// Allows taxonomy filters to work even when not added to the Taxonomies tab
+	// (e.g. links on product meta, taxonomy-redirect params).
+	// Builds a reverse map: cf_param_key(taxonomy) → taxonomy slug.
+	$tax_param_map = [];
+	foreach ( get_object_taxonomies( 'product', 'names' ) as $tax ) {
+		$tax_param_map[ cf_param_key( $tax ) ] = $tax;
+	}
+
+	foreach ( $params as $key => $value ) {
+		if ( strpos( $key, 'cf_' ) !== 0 ) continue;
+		if ( in_array( $key, $handled_keys, true ) ) continue;
+		if ( ! isset( $tax_param_map[ $key ] ) ) continue;
+
+		$slugs = array_values( array_filter( array_map( 'sanitize_text_field', (array) $value ) ) );
+		if ( empty( $slugs ) ) continue;
+
+		$tax_query[] = [
+			'taxonomy' => $tax_param_map[ $key ],
+			'field'    => 'slug',
+			'terms'    => $slugs,
+			'operator' => 'IN',
+		];
+	}
+
 	return $tax_query;
 }
 
@@ -332,4 +366,104 @@ function cf_handle_ajax_filter() {
         'pagination' => $pagination_html,
         'count'      => $query->found_posts,
     ] );
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * TAXONOMY → FILTER URL REDIRECT
+ *
+ * When "Rewrite taxonomy URLs" is enabled, any request to a WC taxonomy
+ * archive page (product_cat, product_tag, pa_* attributes) is 301-redirected
+ * to the shop page with the matching cf_* filter parameter applied.
+ *
+ * Example:
+ *   /product-category/point/  →  /shop/?cf_category[]=point
+ *   /product-tag/sale/        →  /shop/?cf_tag[]=sale
+ *   /pa_color/red/            →  /shop/?cf_color[]=red   (if pa_color mapped)
+ *
+ * Mapped filters (those configured in the plugin's Taxonomies tab) use their
+ * configured url_key. Unmapped WC taxonomies fall back to the generic
+ * cf_param_key() naming so they still work even without an explicit mapping.
+ *
+ * Multiple query-string params from the original URL (e.g. pagination or
+ * extra filters) are preserved and forwarded to the redirect destination.
+ *
+ * Uses template_redirect (priority 1) — fires before any template is loaded
+ * so no output is sent. wp_safe_redirect() is used with a 301 to be SEO-safe.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+add_action( 'template_redirect', 'cf_maybe_redirect_taxonomy_to_filter', 1 );
+
+function cf_maybe_redirect_taxonomy_to_filter() {
+    // Feature gate — check the option first to bail out cheaply.
+    $settings = get_option( 'cf_general_settings', [] );
+    if ( empty( $settings['rewrite_taxonomy_urls'] ) ) {
+        return;
+    }
+
+    // Only act on taxonomy archives for WooCommerce product taxonomies.
+    if ( ! is_tax() ) {
+        return;
+    }
+
+    $queried_object = get_queried_object();
+    if ( ! ( $queried_object instanceof WP_Term ) ) {
+        return;
+    }
+
+    $taxonomy = $queried_object->taxonomy;
+    $term_slug = $queried_object->slug;
+
+    // Confirm this taxonomy belongs to 'product' post type.
+    $product_taxonomies = get_object_taxonomies( 'product', 'names' );
+    if ( ! in_array( $taxonomy, $product_taxonomies, true ) ) {
+        return;
+    }
+
+    // Build the cf_ param key for this taxonomy.
+    // Priority: use the url_key from a configured filter if one exists.
+    // This is the only reliable way — cf_param_key() only strips "pa_", not
+    // "product_" (e.g. product_cat → cf_product_cat, which is wrong).
+    $param_key = null;
+    foreach ( get_option( 'cf_filters', [] ) as $filter ) {
+        if ( ( $filter['taxonomy'] ?? '' ) === $taxonomy ) {
+            $param_key = cf_param_key( $taxonomy, $filter['url_key'] ?? '' );
+            break;
+        }
+    }
+    // Fallback for unmapped taxonomies: strip known WC prefixes (pa_, product_).
+    if ( $param_key === null ) {
+        $short = preg_replace( '/^(pa_|product_)/', '', $taxonomy );
+        $param_key = 'cf_' . $short;
+    }
+
+    // Build destination: shop URL + filter param + any extra query args from
+    // the original request (e.g. ?paged=2 or other active filters).
+    $shop_url = function_exists( 'wc_get_page_id' )
+        ? get_permalink( wc_get_page_id( 'shop' ) )
+        : home_url( '/' );
+
+    // Carry through any existing GET params; strip WP's internal taxonomy vars.
+    $wc_tax_vars  = [ 'product_cat', 'product_tag', $taxonomy, 'taxonomy', 'term' ];
+    $extra_params = array_diff_key( $_GET, array_flip( $wc_tax_vars ) );
+
+    // Sanitize scalar params only — array params (other active filters) are
+    // kept as-is so their structure survives the add_query_arg() call.
+    foreach ( $extra_params as $k => &$v ) {
+        if ( is_array( $v ) ) {
+            $v = array_map( 'sanitize_text_field', $v );
+        } else {
+            $v = sanitize_text_field( $v );
+        }
+    }
+    unset( $v );
+
+    // Append the term slug as an array value — matches how cf_* filter params
+    // are expected: cf_category[]=tops (not cf_category=tops).
+    $extra_params[ $param_key ] = [ sanitize_text_field( $term_slug ) ];
+
+    $redirect_url = add_query_arg( $extra_params, trailingslashit( $shop_url ) );
+
+    wp_safe_redirect( $redirect_url, 301 );
+    exit;
 }

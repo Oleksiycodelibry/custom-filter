@@ -449,46 +449,50 @@ function cf_render_active_filters_bar( $filters, $shop_url ) {
 			];
 		}
 	}
-	// Build a set of param keys already handled above
+
+	// ── Fallback: chips for cf_* params not covered by any configured filter ──
+	// Handles params injected externally (product meta links, taxonomy redirect)
+	// that are valid WC taxonomy filters but not listed in the Taxonomies tab.
+	//
+	// Reverse-lookup: for every unhandled cf_* param, find the WP taxonomy
+	// whose cf_param_key() output matches. Direct string-strip of "cf_" fails
+	// because WP taxonomy slugs (product_cat, pa_color) never equal the short
+	// key (category, color) — we must check all product taxonomies explicitly.
+
 	$handled_params = [];
 	foreach ( $filters as $filter ) {
 		if ( empty( $filter['taxonomy'] ) ) continue;
 		if ( $filter['taxonomy'] === '_price' ) {
-			$base = 'cf_' . ( $filter['url_key'] ?: 'price' );
-			$handled_params[] = $base . '_min';
-			$handled_params[] = $base . '_max';
-			$handled_params[] = $base . '_range';
+			$b = 'cf_' . ( $filter['url_key'] ?: 'price' );
+			$handled_params[] = $b . '_min';
+			$handled_params[] = $b . '_max';
+			$handled_params[] = $b . '_range';
 		} else {
 			$handled_params[] = cf_param_key( $filter['taxonomy'], $filter['url_key'] ?? '' );
 		}
 	}
 
-	// Walk every GET param, pick up anything cf_* that wasn't handled
+	// Map every product taxonomy to the param key it would produce (no url_key).
+	$tax_param_map = [];
+	foreach ( get_object_taxonomies( 'product', 'names' ) as $tax ) {
+		$tax_param_map[ cf_param_key( $tax ) ] = $tax;
+	}
+
 	foreach ( $_GET as $key => $value ) {
-		// Only touch cf_* params
 		if ( strpos( $key, 'cf_' ) !== 0 ) continue;
-
-		// Skip price suffixes — handled above or not active
 		if ( preg_match( '/_min$|_max$|_range$/', $key ) ) continue;
-
-		// Skip already-handled params
 		if ( in_array( $key, $handled_params, true ) ) continue;
 
-		// Derive taxonomy from the param key (reverse of cf_param_key logic)
-		// cf_param_key returns 'cf_{taxonomy}' when no url_key, so strip the prefix
-		$taxonomy = preg_replace( '/^cf_/', '', $key );
-
-		$selected_vals = array_filter( array_map( 'sanitize_text_field', (array) $value ) );
+		$selected_vals = array_values( array_filter( array_map( 'sanitize_text_field', (array) $value ) ) );
 		if ( empty( $selected_vals ) ) continue;
 
-		// Use the taxonomy label if the taxonomy exists, otherwise humanise the key
-		$label_text = taxonomy_exists( $taxonomy )
-			? cf_get_taxonomy_label( $taxonomy )
-			: ucwords( str_replace( [ 'pa_', '_' ], [ '', ' ' ], $taxonomy ) );
+		$real_tax   = $tax_param_map[ $key ] ?? null;
+		$label_text = $real_tax
+			? cf_get_taxonomy_label( $real_tax )
+			: ucwords( str_replace( '_', ' ', preg_replace( '/^cf_/', '', $key ) ) );
 
 		foreach ( $selected_vals as $slug ) {
-			// Try to get a human-readable term name
-			$term       = taxonomy_exists( $taxonomy ) ? get_term_by( 'slug', $slug, $taxonomy ) : null;
+			$term       = $real_tax ? get_term_by( 'slug', $slug, $real_tax ) : null;
 			$term_label = $term ? $term->name : ucwords( str_replace( '-', ' ', $slug ) );
 
 			$query_args = $_GET;
@@ -508,6 +512,7 @@ function cf_render_active_filters_bar( $filters, $shop_url ) {
 			];
 		}
 	}
+
 	$has_chips = ! empty( $chips );
 	?>
 	<div class="cf-active-filters<?php echo $has_chips ? ' cf-active-filters--visible' : ''; ?>">
