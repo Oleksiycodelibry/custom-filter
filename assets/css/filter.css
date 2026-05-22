@@ -508,6 +508,39 @@
 	font-size: 11px;
 }
 
+.cf-price-slider__input-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.cf-price-slider__input-wrap::before {
+	content: attr(data-symbol);
+	position: absolute;
+	left: 7px;
+	font-size: 13px;
+	color: var(--cf-muted, #646970);
+	pointer-events: none;
+	line-height: 1;
+}
+
+.cf-price-slider__val {
+	width: 70px;
+	padding: 4px 6px 4px 18px;
+	border: 1px solid var(--cf-border-color, #d1d5db);
+	border-radius: 4px;
+	font-size: 13px;
+	color: var(--cf-text, #1d2327);
+	background: var(--cf-bg, #fff);
+	-moz-appearance: textfield;
+}
+
+.cf-price-slider__val::-webkit-inner-spin-button,
+.cf-price-slider__val::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
 /* ── Block title ──────────────────────────────────────────── */
 .cf-filter__block-title {
 	font-size: .75rem;
@@ -556,4 +589,58 @@
     inset: 0;
     z-index: 10;
     cursor: wait;
+}
+/* ================================================
+   Subcategory tree
+   ================================================ */
+
+/* Row wraps the label + expand arrow side by side */
+.cf-filter__item-row {
+	display: flex;
+	align-items: center;
+}
+
+.cf-filter__item-row > .cf-filter__checkbox-label,
+.cf-filter__item-row > .cf-filter__radio-label,
+.cf-filter__item-row > .cf-filter__label-item {
+	flex: 1;
+}
+
+/* Expand toggle button */
+.cf-filter__expand {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	margin-right: 8px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--cf-muted);
+	border-radius: var(--cf-radius);
+	transition: background 0.15s, color 0.15s;
+}
+
+.cf-filter__expand:hover {
+	background: #ebebeb;
+	color: var(--cf-text);
+}
+
+.cf-filter__expand svg {
+	transition: transform 0.2s;
+}
+
+.cf-filter__expand[aria-expanded="true"] svg {
+	transform: rotate(180deg);
+}
+
+/* Nested sublist */
+.cf-filter__sublist {
+	list-style: none;
+	margin: 0 0 4px 16px;
+	padding: 0;
+	padding-left: 16px;
+	border-left: 2px solid var(--cf-border);
 }

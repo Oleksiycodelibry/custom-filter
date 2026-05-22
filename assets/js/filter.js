@@ -72,6 +72,53 @@
 		});
 
 		// -------------------------------------------------------------------------
+		// Subcategory expand / collapse
+		// -------------------------------------------------------------------------
+		filter.addEventListener('click', function (e) {
+			var btn = e.target.closest('.cf-filter__expand');
+			if (!btn) return;
+			e.preventDefault();
+			e.stopPropagation();
+			var item    = btn.closest('.cf-filter__item--has-children');
+			var sublist = item ? item.querySelector('.cf-filter__sublist') : null;
+			if (!sublist) return;
+			var open = btn.getAttribute('aria-expanded') === 'true';
+			btn.setAttribute('aria-expanded', String(!open));
+			item.classList.toggle('cf-filter__item--open', !open);
+			slideToggle(sublist, 200);
+		});
+
+		// Checking a parent checks/unchecks all its children and auto-opens the sublist.
+		filter.addEventListener('change', function (e) {
+			var input = e.target.closest('.cf-filter__input');
+			if (!input) return;
+			var item = input.closest('.cf-filter__item--has-children');
+			if (!item) return;
+			// Only propagate when this input belongs directly to `item`,
+			// not when it is itself a sub-item nested inside a parent item.
+			if (input.closest('.cf-filter__sublist')) return;
+			var sublist = item.querySelector('.cf-filter__sublist');
+			if (!sublist) return;
+
+			sublist.querySelectorAll('.cf-filter__input').forEach(function (child) {
+				child.checked = input.checked;
+				var lbl  = child.closest('.cf-filter__label-item');
+				var rlbl = child.closest('.cf-filter__radio-label');
+				if (lbl)  lbl.classList.toggle('is-active', input.checked);
+				if (rlbl) rlbl.classList.toggle('is-checked', input.checked);
+			});
+
+			if (input.checked) {
+				var btn = item.querySelector('.cf-filter__expand');
+				if (btn && btn.getAttribute('aria-expanded') === 'false') {
+					btn.setAttribute('aria-expanded', 'true');
+					item.classList.add('cf-filter__item--open');
+					slideDown(sublist, 200);
+				}
+			}
+		});
+
+		// -------------------------------------------------------------------------
 		// Price range slider
 		// -------------------------------------------------------------------------
 		filter.querySelectorAll('.cf-filter__block--price[data-type="slider"]').forEach(function (block) {
@@ -94,10 +141,12 @@
 				var lo = +rMin.value, hi = +rMax.value;
 				range.style.left  = ((lo - min) / (max - min) * 100) + '%';
 				range.style.right = ((1 - (hi - min) / (max - min)) * 100) + '%';
-				if (lMin) lMin.textContent = fmt(lo);
-				if (lMax) lMax.textContent = fmt(hi);
+				// Two-way: update the number inputs to match the slider
+				if (lMin) lMin.value = lo;
+				if (lMax) lMax.value = hi;
 			}
 
+			// Slider → input
 			rMin.addEventListener('input', function () {
 				if (+rMin.value >= +rMax.value) rMin.value = +rMax.value - 1;
 				sync();
@@ -107,6 +156,7 @@
 				sync();
 			});
 
+			// Slider release → submit
 			[rMin, rMax].forEach(function (r) {
 				r.addEventListener('change', function () {
 					hMin.disabled = false; hMin.value = rMin.value;
@@ -114,6 +164,31 @@
 					cfSubmit(form);
 				});
 			});
+
+			// Input → slider (two-way binding)
+			var inputTimer;
+			function onValInput(isMin) {
+				return function () {
+					clearTimeout(inputTimer);
+					var lo = parseInt(lMin.value, 10);
+					var hi = parseInt(lMax.value, 10);
+					if (isNaN(lo) || isNaN(hi)) return;
+					lo = Math.max(min, Math.min(lo, max));
+					hi = Math.max(min, Math.min(hi, max));
+					if (isMin && lo >= hi) lo = hi - 1;
+					if (!isMin && hi <= lo) hi = lo + 1;
+					lMin.value = lo; lMax.value = hi;
+					rMin.value = lo; rMax.value = hi;
+					sync();
+					inputTimer = setTimeout(function () {
+						hMin.disabled = false; hMin.value = lo;
+						hMax.disabled = false; hMax.value = hi;
+						cfSubmit(form);
+					}, 600);
+				};
+			}
+			if (lMin) lMin.addEventListener('input', onValInput(true));
+			if (lMax) lMax.addEventListener('input', onValInput(false));
 
 			sync();
 			if (hMin.value !== '') hMin.value = rMin.value;

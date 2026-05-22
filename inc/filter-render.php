@@ -12,6 +12,103 @@ function cf_dropdown_arrow() {
 }
 
 /**
+ * Groups a flat list of terms into a parent→children tree.
+ * Returns [ 'roots' => WP_Term[], 'by_id' => [ id => [ 'term', 'children' ] ] ]
+ * Top-level terms (parent=0 or parent not in list) appear at roots.
+ */
+function cf_build_term_tree( array $terms ) : array {
+	$by_id = [];
+	$roots = [];
+
+	foreach ( $terms as $term ) {
+		$by_id[ $term->term_id ] = [ 'term' => $term, 'children' => [] ];
+	}
+	foreach ( $by_id as $id => &$node ) {
+		$parent = $node['term']->parent;
+		if ( $parent && isset( $by_id[ $parent ] ) ) {
+			$by_id[ $parent ]['children'][] = $node['term'];
+		} else {
+			$roots[] = $node['term'];
+		}
+	}
+	unset( $node );
+
+	return [ 'roots' => $roots, 'by_id' => $by_id ];
+}
+
+/**
+ * Renders one <li> for a term, recursing into children if any exist.
+ */
+function cf_render_term_item( WP_Term $term, array $by_id, array $args ) : void {
+	$uid          = 'cf-' . $args['taxonomy'] . '-' . $term->term_id;
+	$checked      = in_array( $term->slug, $args['selected_vals'], true );
+	$list_style   = $args['list_style'];
+	$param_name   = $args['param_name'];
+	$show_count   = $args['show_count'];
+	$children     = $by_id[ $term->term_id ]['children'] ?? [];
+	$has_children = ! empty( $children );
+
+	// Open sublist on load if any direct child is already selected
+	$descendant_checked = false;
+	if ( $has_children ) {
+		foreach ( $children as $child ) {
+			if ( in_array( $child->slug, $args['selected_vals'], true ) ) {
+				$descendant_checked = true;
+				break;
+			}
+		}
+	}
+
+	$li_class = 'cf-filter__item';
+	if ( $has_children ) $li_class .= ' cf-filter__item--has-children';
+	if ( $descendant_checked ) $li_class .= ' cf-filter__item--open';
+	?>
+	<li class="<?php echo esc_attr( $li_class ); ?>">
+		<div class="cf-filter__item-row">
+			<?php if ( $list_style === 'label' ) : ?>
+				<label class="cf-filter__label-item<?php echo $checked ? ' is-active' : ''; ?>" for="<?php echo esc_attr( $uid ); ?>">
+					<input type="checkbox" id="<?php echo esc_attr( $uid ); ?>" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $term->slug ); ?>" class="cf-filter__input cf-sr-only" <?php checked( $checked ); ?>>
+					<span class="cf-filter__item-name"><?php echo esc_html( $term->name ); ?></span>
+					<?php if ( $show_count ) : ?><span class="cf-filter__count"><?php echo absint( $term->count ); ?></span><?php endif; ?>
+				</label>
+
+			<?php elseif ( $list_style === 'radio' ) : ?>
+				<label class="cf-filter__radio-label<?php echo $checked ? ' is-checked' : ''; ?>" for="<?php echo esc_attr( $uid ); ?>">
+					<span class="cf-filter__radio-dot" aria-hidden="true"></span>
+					<input type="checkbox" id="<?php echo esc_attr( $uid ); ?>" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $term->slug ); ?>" class="cf-filter__input cf-sr-only cf-radio-visual" <?php checked( $checked ); ?>>
+					<span class="cf-filter__item-name"><?php echo esc_html( $term->name ); ?></span>
+					<?php if ( $show_count ) : ?><span class="cf-filter__count">(<?php echo absint( $term->count ); ?>)</span><?php endif; ?>
+				</label>
+
+			<?php else : ?>
+				<label class="cf-filter__checkbox-label" for="<?php echo esc_attr( $uid ); ?>">
+					<input type="checkbox" id="<?php echo esc_attr( $uid ); ?>" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $term->slug ); ?>" class="cf-filter__input" <?php checked( $checked ); ?>>
+					<span class="cf-filter__item-name"><?php echo esc_html( $term->name ); ?></span>
+					<?php if ( $show_count ) : ?><span class="cf-filter__count">(<?php echo absint( $term->count ); ?>)</span><?php endif; ?>
+				</label>
+			<?php endif; ?>
+
+			<?php if ( $has_children ) : ?>
+				<button type="button" class="cf-filter__expand"
+				        aria-expanded="<?php echo $descendant_checked ? 'true' : 'false'; ?>"
+				        aria-label="<?php esc_attr_e( 'Toggle subcategories', 'cf-plugin' ); ?>">
+					<?php echo cf_dropdown_arrow(); ?>
+				</button>
+			<?php endif; ?>
+		</div>
+
+		<?php if ( $has_children ) : ?>
+			<ul class="cf-filter__sublist"<?php echo ! $descendant_checked ? ' style="display:none"' : ''; ?>>
+				<?php foreach ( $children as $child ) : ?>
+					<?php cf_render_term_item( $child, $by_id, $args ); ?>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+	</li>
+	<?php
+}
+
+/**
  * Renders the filter form — called by [custom_filter].
  *
  * Each block gets BEM modifier classes and data attributes for JS:
@@ -30,10 +127,14 @@ function cf_render_filter_output() {
 	$show_empty = ! empty( $settings['show_empty'] );
 	$show_count = ! empty( $settings['show_count'] );
 	$autosubmit = ! empty( $settings['autosubmit'] );
-	$shop_url   = function_exists( 'wc_get_page_id' ) ? get_permalink( wc_get_page_id( 'shop' ) ) : home_url( '/' );
+	$shop_url = function_exists( 'wc_get_page_id' ) ? get_permalink( wc_get_page_id( 'shop' ) ) : home_url( '/' );
+	// On a taxonomy archive, submit back to the same page — not back to /shop/
+	$form_action = ( is_tax() || is_product_category() || is_product_tag() )
+		? get_term_link( get_queried_object() )
+		: $shop_url;
 	?>
 	<div class="cf-filter" data-autosubmit="<?php echo $autosubmit ? '1' : '0'; ?>">
-		<form class="cf-filter__form" method="get" action="<?php echo esc_url( $shop_url ); ?>">
+		<form class="cf-filter__form" method="get" action="<?php echo esc_url( $form_action ); ?>">
 
 		<?php foreach ( $filters as $filter ) :
 			if ( empty( $filter['taxonomy'] ) ) continue;
@@ -115,38 +216,20 @@ function cf_render_filter_output() {
 				</div>
 
 				<div class="cf-filter__list-wrap"<?php echo ! $is_open ? ' style="display:none"' : ''; ?>>
-					<ul class="cf-filter__list cf-filter__list--<?php echo esc_attr( $list_style ); ?>">
-					<?php foreach ( $terms as $term ) :
-						$uid     = 'cf-' . $filter['taxonomy'] . '-' . $term->term_id;
-						$checked = in_array( $term->slug, $selected_vals, true );
+					<?php
+					$tree      = cf_build_term_tree( $terms );
+					$item_args = [
+						'taxonomy'      => $filter['taxonomy'],
+						'param_name'    => $param_name,
+						'selected_vals' => $selected_vals,
+						'list_style'    => $list_style,
+						'show_count'    => $show_count,
+					];
 					?>
-					<li class="cf-filter__item">
-						<?php if ( $list_style === 'label' ) : ?>
-							<label class="cf-filter__label-item<?php echo $checked ? ' is-active' : ''; ?>" for="<?php echo esc_attr( $uid ); ?>">
-								<input type="checkbox" id="<?php echo esc_attr( $uid ); ?>" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $term->slug ); ?>" class="cf-filter__input cf-sr-only" <?php checked( $checked ); ?>>
-								<span class="cf-filter__item-name"><?php echo esc_html( $term->name ); ?></span>
-								<?php if ( $show_count ) : ?><span class="cf-filter__count"><?php echo absint( $term->count ); ?></span><?php endif; ?>
-							</label>
-
-						<?php elseif ( $list_style === 'radio' ) : ?>
-							<?php // Radio dot is purely visual — uses checkbox underneath so multi-select works.
-							      // Single-choice is enforced by JS when data-logic="single" on the parent block. ?>
-							<label class="cf-filter__radio-label<?php echo $checked ? ' is-checked' : ''; ?>" for="<?php echo esc_attr( $uid ); ?>">
-								<span class="cf-filter__radio-dot" aria-hidden="true"></span>
-								<input type="checkbox" id="<?php echo esc_attr( $uid ); ?>" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $term->slug ); ?>" class="cf-filter__input cf-sr-only cf-radio-visual" <?php checked( $checked ); ?>>
-								<span class="cf-filter__item-name"><?php echo esc_html( $term->name ); ?></span>
-								<?php if ( $show_count ) : ?><span class="cf-filter__count">(<?php echo absint( $term->count ); ?>)</span><?php endif; ?>
-							</label>
-
-						<?php else : ?>
-							<label class="cf-filter__checkbox-label" for="<?php echo esc_attr( $uid ); ?>">
-								<input type="checkbox" id="<?php echo esc_attr( $uid ); ?>" name="<?php echo esc_attr( $param_name ); ?>" value="<?php echo esc_attr( $term->slug ); ?>" class="cf-filter__input" <?php checked( $checked ); ?>>
-								<span class="cf-filter__item-name"><?php echo esc_html( $term->name ); ?></span>
-								<?php if ( $show_count ) : ?><span class="cf-filter__count">(<?php echo absint( $term->count ); ?>)</span><?php endif; ?>
-							</label>
-						<?php endif; ?>
-					</li>
-					<?php endforeach; ?>
+					<ul class="cf-filter__list cf-filter__list--<?php echo esc_attr( $list_style ); ?>">
+						<?php foreach ( $tree['roots'] as $term ) : ?>
+							<?php cf_render_term_item( $term, $tree['by_id'], $item_args ); ?>
+						<?php endforeach; ?>
 					</ul>
 				</div>
 
@@ -246,9 +329,17 @@ function cf_render_price_block( $filter ) {
 				<input type="range" class="cf-price-slider__input cf-price-slider__input--max" min="<?php echo esc_attr( $bound_min ); ?>" max="<?php echo esc_attr( $bound_max ); ?>" value="<?php echo esc_attr( $cur_max !== '' ? $cur_max : $bound_max ); ?>" step="1">
 			</div>
 			<div class="cf-price-slider__labels">
-				<span class="cf-price-slider__val cf-price-slider__val--min"><?php echo esc_html( cf_format_price( $cur_min !== '' ? $cur_min : $bound_min ) ); ?></span>
+				<span class="cf-price-slider__input-wrap" data-symbol="<?php echo esc_attr( cf_price_symbol() ); ?>">
+					<input type="number" class="cf-price-slider__val cf-price-slider__val--min"
+						value="<?php echo esc_attr( (int) ( $cur_min !== '' ? $cur_min : $bound_min ) ); ?>"
+						min="<?php echo esc_attr( $bound_min ); ?>" max="<?php echo esc_attr( $bound_max ); ?>" step="1">
+				</span>
 				<span class="cf-price-slider__sep">–</span>
-				<span class="cf-price-slider__val cf-price-slider__val--max"><?php echo esc_html( cf_format_price( $cur_max !== '' ? $cur_max : $bound_max ) ); ?></span>
+				<span class="cf-price-slider__input-wrap" data-symbol="<?php echo esc_attr( cf_price_symbol() ); ?>">
+					<input type="number" class="cf-price-slider__val cf-price-slider__val--max"
+						value="<?php echo esc_attr( (int) ( $cur_max !== '' ? $cur_max : $bound_max ) ); ?>"
+						min="<?php echo esc_attr( $bound_min ); ?>" max="<?php echo esc_attr( $bound_max ); ?>" step="1">
+				</span>
 			</div>
 			<?php
 			// Hidden inputs are disabled until the user moves the slider.
@@ -362,8 +453,19 @@ function cf_get_max_price() {
 // Formats a number as a price string using WC's currency settings.
 // Falls back to the raw number if WC is unavailable.
 function cf_price_symbol() {
-    $s = get_option( 'cf_general_settings', [] );
-    return $s['price_currency'] ?? '';
+    $s      = get_option( 'cf_general_settings', [] );
+    $custom = $s['price_currency'] ?? '';
+
+    if ( $custom !== '' ) {
+        return $custom;
+    }
+
+    // Fall back to the active WooCommerce currency symbol.
+    if ( function_exists( 'get_woocommerce_currency_symbol' ) ) {
+        return html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' );
+    }
+
+    return '';
 }
 function cf_format_price( $price ) {
     $symbol = cf_price_symbol();

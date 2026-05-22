@@ -32,7 +32,11 @@ function cf_enqueue_frontend_assets() {
 		'request_url'     => home_url( add_query_arg( [] ) ), // current full URL incl. rewrites
 		'shop_url'        => function_exists( 'wc_get_page_id' ) ? get_permalink( wc_get_page_id( 'shop' ) ) : home_url( '/' ),
 		'tax_labels'      => $tax_labels,
-        'currency_symbol' => $settings['price_currency'] ?? '',
+        'currency_symbol' => ( isset( $settings['price_currency'] ) && $settings['price_currency'] !== '' )
+            ? $settings['price_currency']
+            : ( function_exists( 'get_woocommerce_currency_symbol' )
+                ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
+                : '' ),
         'currency_pos'    => 'left',
 		'nonce'           => wp_create_nonce( 'cf_ajax_filter' ),
 	] );
@@ -60,6 +64,9 @@ function cf_render_filter_shortcode() {
 }
 function cf_render_active_filters_shortcode() {
 	$shop_url = function_exists( 'wc_get_page_id' ) ? get_permalink( wc_get_page_id( 'shop' ) ) : home_url( '/' );
+    if ( is_tax() || is_product_category() || is_product_tag() ) {
+        $shop_url = get_term_link( get_queried_object() );
+    }
 	ob_start(); cf_render_active_filters_bar( get_option( 'cf_filters', [] ), $shop_url ); return ob_get_clean();
 }
 
